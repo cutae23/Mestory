@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mestory - My D-Day Story</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:#0a0a0a;
+    min-height:100vh;
+  }
+  #app { max-width:420px; margin:0 auto; padding-bottom:120px; min-height:100vh; background:#0a0a0a; }
+  button { font-family:inherit; }
+  input, select { font-family:inherit; }
+  ::-webkit-scrollbar { display:none; }
+
+  /* 헤더 */
+  .header { background:#000; padding:22px 18px 0; border-bottom:1px solid #1a1a1a; }
+  .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .logo-row { display:flex; align-items:center; gap:10px; }
+  .logo-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#FF6B9D,#A78BFA);
+    display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 0 16px #FF6B9D55; }
+  .logo-title { font-weight:900; font-size:20px; color:white; letter-spacing:1px; line-height:1.2; }
+  .logo-sub { font-size:9px; color:#333; letter-spacing:2px; font-family:monospace; }
+  .storage-box { text-align:right; }
+  .storage-label { font-size:9px; color:#333; font-family:monospace; }
+  .storage-val { font-size:10px; color:#555; font-family:monospace; }
+  .storage-bar-bg { width:70px; height:3px; background:#1a1a1a; border-radius:2px; margin-top:2px; }
+  .storage-bar-fill { height:100%; background:linear-gradient(90deg,#A78BFA,#FF6B9D); border-radius:2px; }
+
+  .dday-banner { background:linear-gradient(135deg,rgba(255,107,157,0.12),rgba(167,139,250,0.12));
+    border-radius:12px; padding:8px 14px; margin-bottom:10px; display:flex; align-items:center; gap:8px;
+    border:1px solid rgba(255,107,157,0.25); }
+  .dday-banner span.txt { font-weight:700; font-size:12px; color:#FF6B9D; }
+
+  .sprocket-row { display:flex; gap:5px; padding-bottom:10px; overflow:hidden; }
+  .sprocket { width:15px; height:9px; border-radius:2px; background:#1a1a1a; border:1px solid #222; flex-shrink:0; }
+
+  /* 필터 */
+  .filters { background:#0d0d0d; border-bottom:1px solid #1a1a1a; padding:9px 14px; display:flex; gap:7px; overflow-x:auto; }
+  .filter-chip { border-radius:20px; padding:5px 14px; cursor:pointer; font-weight:700; font-size:11px;
+    white-space:nowrap; transition:all .15s; border:1px solid #222; background:#1a1a1a; color:#444; }
+  .filter-chip.active { border:none; background:linear-gradient(135deg,#FF6B9D,#A78BFA); color:white;
+    box-shadow:0 2px 10px #FF6B9D55; }
+
+  /* 필름 카드 */
+  .film-list { padding:16px 14px; }
+  .empty-state { text-align:center; padding:60px 0; color:#333; }
+  .empty-state .emoji { font-size:46px; margin-bottom:10px; filter:grayscale(1); }
+  .empty-state .txt { font-weight:700; font-size:14px; color:#444; }
+
+  .film-card { display:flex; margin-bottom:20px; cursor:pointer;
+    filter:drop-shadow(0 4px 20px rgba(0,0,0,0.6)); transition:transform .2s, filter .2s; }
+  .film-card:hover { transform:scale(1.015) translateY(-2px); filter:drop-shadow(0 8px 32px rgba(0,0,0,0.8)); }
+  .film-side { background:#111; display:flex; align-items:center; padding:0 3px; }
+  .film-side.left { border-radius:16px 0 0 16px; border-right:1px solid #222; }
+  .film-side.right { border-radius:0 16px 16px 0; border-left:1px solid #222; }
+  .film-holes { display:flex; flex-direction:column; gap:9px; padding:6px 0; align-items:center; width:22px; }
+  .film-hole { width:13px; height:10px; border-radius:3px; background:#0a0a0a; border:1.5px solid #2a2a2a; flex-shrink:0; }
+
+  .film-body { flex:1; background:#111; overflow:hidden; min-height:180px; }
+  .film-meta { background:#0a0a0a; padding:5px 10px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #1e1e1e; }
+  .film-meta-left { display:flex; align-items:center; gap:6px; }
+  .film-meta-emoji { font-size:13px; }
+  .film-meta-id { font-size:9px; color:#444; font-family:monospace; letter-spacing:1.5px; }
+  .film-meta-tag { font-size:9px; color:#333; font-family:monospace; letter-spacing:1px; }
+
+  .film-photo-wrap { position:relative; height:136px; }
+  .film-photo-wrap img { width:100%; height:100%; object-fit:cover; display:block; filter:sepia(10%) contrast(1.05) brightness(0.95); }
+  .film-grain { position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.025) 3px,rgba(0,0,0,0.025) 4px); pointer-events:none; }
+  .film-vignette { position:absolute; inset:0; background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,0.55) 100%); pointer-events:none; }
+  .film-badge-corner { position:absolute; bottom:8px; right:10px; }
+
+  .film-placeholder { height:136px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#0f0f1a,#1a1a2e,#0d1b2a); position:relative; overflow:hidden; }
+  .film-placeholder .star { position:absolute; border-radius:50%; background:white; }
+  .film-placeholder .big-emoji { font-size:48px; opacity:0.85; }
+
+  .film-bottom { background:#0a0a0a; padding:7px 10px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1e1e1e; }
+  .film-bottom-title { color:#e8e8e8; font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .film-bottom-date { color:#444; font-size:9px; margin-top:2px; font-family:monospace; }
+  .film-bottom-size { margin-left:8px; font-size:9px; color:#2a2a2a; font-family:monospace; flex-shrink:0; }
+
+  .dday-badge { border-radius:8px; padding:4px 9px; font-weight:800; font-size:11px; font-family:monospace;
+    letter-spacing:0.5px; white-space:nowrap; }
+
+  /* 하단 고정 바 */
+  .bottom-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px;
+    background:#000; border-top:1px solid #1a1a1a; padding:8px 14px 18px; z-index:50; }
+  .add-btn { width:100%; background:linear-gradient(135deg,#FF6B9D,#A78BFA); border:none; border-radius:14px;
+    padding:13px; color:white; font-weight:800; font-size:14px; cursor:pointer; box-shadow:0 4px 20px #FF6B9D55;
+    display:flex; align-items:center; justify-content:center; gap:8px; }
+
+  /* 모달 */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:200; display:flex;
+    align-items:flex-end; justify-content:center; }
+  .modal-overlay.hidden { display:none; }
+  .modal-sheet { background:#111; border-radius:24px 24px 0 0; padding:20px 18px 44px; width:100%; max-width:420px;
+    box-shadow:0 -8px 40px rgba(0,0,0,0.9); max-height:94vh; overflow-y:auto; border:1px solid #222; }
+  .modal-handle { width:36px; height:3px; background:#333; border-radius:3px; margin:0 auto 16px; }
+  .modal-title { text-align:center; margin-bottom:16px; color:#e8e8e8; font-weight:800; font-size:15px; }
+
+  .field { margin-bottom:12px; }
+  .field-label { font-size:11px; font-weight:700; color:#555; margin-bottom:6px; }
+  .field input[type=text], .field input[type=date] {
+    width:100%; border:1.5px solid #2a2a2a; border-radius:11px; padding:9px 12px; font-size:13px;
+    outline:none; box-sizing:border-box; background:#1a1a1a; color:#e8e8e8;
+  }
+  .field select {
+    width:100%; border:1.5px solid #2a2a2a; border-radius:11px; padding:9px 10px; font-size:13px;
+    outline:none; box-sizing:border-box; background:#1a1a1a; color:#e8e8e8;
+  }
+
+  .emoji-grid { display:flex; flex-wrap:wrap; gap:6px; }
+  .emoji-btn { width:36px; height:36px; border-radius:10px; border:1.5px solid #222; background:#1a1a1a;
+    font-size:17px; cursor:pointer; }
+  .emoji-btn.active { border:2px solid #A78BFA; background:#1a1a2e; }
+
+  .color-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .color-btn { width:28px; height:28px; border-radius:50%; border:3px solid #111; cursor:pointer;
+    box-shadow:0 0 0 1.5px #333; }
+  .color-btn.active { border:3px solid white; }
+
+  .type-toggle { display:flex; gap:8px; }
+  .type-btn { flex:1; padding:9px; border-radius:11px; border:none; cursor:pointer; font-weight:700;
+    font-size:13px; background:#1a1a1a; color:#444; }
+  .type-btn.active { background:linear-gradient(135deg,#FF6B9D,#A78BFA); color:white; }
+
+  .lunar-row { display:flex; gap:8px; }
+  .lunar-preview { margin-top:7px; font-size:11px; color:#A78BFA; font-weight:600; background:#1a1a2e;
+    border-radius:9px; padding:5px 10px; display:inline-block; }
+
+  .two-col { display:flex; gap:10px; }
+  .two-col > div { flex:1; }
+
+  .suggest-box { margin-top:7px; display:flex; align-items:center; gap:8px; background:#1a1a2e;
+    border-radius:11px; padding:8px 12px; border:1px solid #A78BFA44; }
+  .suggest-emoji { font-size:18px; }
+  .suggest-txt { font-size:11px; color:#A78BFA; font-weight:600; flex:1; }
+  .suggest-apply { background:linear-gradient(135deg,#A78BFA,#FF6B9D); border:none; border-radius:8px;
+    padding:4px 10px; color:white; font-weight:700; font-size:11px; cursor:pointer; }
+  .suggest-dismiss { background:#222; border:none; border-radius:8px; padding:4px 8px; color:#555;
+    font-weight:700; font-size:11px; cursor:pointer; }
+
+  .save-btn { width:100%; background:linear-gradient(135deg,#FF6B9D,#A78BFA); border:none; border-radius:13px;
+    padding:13px; color:white; font-weight:800; font-size:15px; cursor:pointer; box-shadow:0 4px 20px #FF6B9D55;
+    margin-bottom:10px; }
+  .delete-btn { width:100%; background:#1a1a1a; border:1px solid #2a2a2a; border-radius:13px; padding:11px;
+    color:#F43F5E; font-weight:700; font-size:14px; cursor:pointer; }
+
+  /* 사진 업로더 */
+  .photo-section { margin-bottom:14px; }
+  .photo-preview { position:relative; border-radius:14px; overflow:hidden; height:120px; border:1px solid #2a2a2a; }
+  .photo-preview img { width:100%; height:100%; object-fit:cover; filter:sepia(10%); cursor:grab;
+    touch-action:none; -webkit-user-drag:none; user-select:none; }
+  .photo-preview img:active { cursor:grabbing; }
+  .photo-drag-hint { font-size:10px; color:#444; text-align:center; margin-top:6px; }
+  .photo-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center;
+    justify-content:center; gap:10px; }
+  .photo-change-btn { background:rgba(255,255,255,0.9); border:none; border-radius:10px; padding:6px 13px;
+    font-weight:700; font-size:12px; cursor:pointer; color:#111; }
+  .photo-delete-btn { background:rgba(244,63,94,0.9); border:none; border-radius:10px; padding:6px 13px;
+    font-weight:700; font-size:12px; color:white; cursor:pointer; }
+  .photo-size-tag { position:absolute; bottom:6px; right:8px; background:rgba(0,0,0,0.7); border-radius:6px;
+    padding:2px 7px; font-size:9px; font-family:monospace; }
+  .photo-size-orig { color:#f87171; text-decoration:line-through; margin-right:4px; }
+  .photo-size-comp { color:#86efac; }
+
+  .photo-drop { height:90px; border-radius:14px; border:2px dashed #2a2a2a; background:#0d0d0d; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; transition:all .15s; }
+  .photo-drop.dragover { border-color:#A78BFA; background:#1a1a2e; }
+  .photo-drop .icon { font-size:24px; }
+  .photo-drop .txt1 { font-size:11px; color:#555; font-weight:600; }
+  .photo-drop .txt2 { font-size:9px; color:#333; }
+
+  .loading-screen { min-height:100vh; background:#0a0a0a; display:flex; align-items:center; justify-content:center;
+    color:#333; font-family:monospace; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading-screen" id="loadingScreen">🎞️ Loading Mestory...</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// IndexedDB 저장소 (사진 포함 무제한 저장)
+// ════════════════════════════════════════════════
+const DB_NAME = "mestory_db";
+const DB_VER  = 1;
+const STORE   = "items";
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: "id" });
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function dbGetAll() {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+async function dbPut(item) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(STORE, "readwrite");
+    const req = tx.objectStore(STORE).put(item);
+    req.onsuccess = () => res();
+    req.onerror   = () => rej(req.error);
+  });
+}
+async function dbDelete(id) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx  = db.transaction(STORE, "readwrite");
+    const req = tx.objectStore(STORE).delete(id);
+    req.onsuccess = () => res();
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+// ════════════════════════════════════════════════
+// 사진 압축 (Canvas → JPEG, 최대 900px, 품질 0.75)
+// ════════════════════════════════════════════════
+function compressImage(file, maxPx = 900, quality = 0.75) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+      res(canvas.toDataURL(mime, quality));
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+}
+function byteSize(b64) {
+  const padding = (b64.match(/=+$/) || [""])[0].length;
+  return Math.round((b64.length * 3) / 4 - padding);
+}
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(2) + " MB";
+}
+
+// ════════════════════════════════════════════════
+// 음력 변환
+// ════════════════════════════════════════════════
+const LNY = {2020:[1,25],2021:[2,12],2022:[2,1],2023:[1,22],2024:[2,10],2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3]};
+const LMD = {2020:[29,30,29,29,30,29,30,29,30,30,30,29],2021:[29,30,29,30,29,30,29,29,30,29,30,29],2022:[30,29,30,29,30,29,30,29,29,30,29,30],2023:[29,30,29,30,29,30,29,30,29,29,30,29],2024:[30,29,30,29,30,29,30,29,30,29,29,30],2025:[29,30,29,30,29,30,29,30,29,30,29,29],2026:[30,29,30,29,30,29,30,29,30,29,30,29],2027:[29,30,29,30,29,29,30,29,30,29,30,30],2028:[29,29,30,29,30,29,30,29,30,29,30,29],2029:[30,29,29,30,29,30,29,30,29,30,29,30],2030:[29,30,29,29,30,29,30,29,30,30,29,30]};
+function lunarToSolar(y,m,d){if(!LNY[y])return null;const[nm,nd]=LNY[y];const b=new Date(y,nm-1,nd);let o=d-1;for(let i=1;i<m;i++)o+=(LMD[y]?.[i-1]??30);b.setDate(b.getDate()+o);return b;}
+function nextLunar(lm,ld){const t=new Date();t.setHours(0,0,0,0);for(let y=t.getFullYear();y<=t.getFullYear()+1;y++){const d=lunarToSolar(y,lm,ld);if(d&&d>=t)return d;}return null;}
+function fmt(d){if(!d)return"";return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function getDday(item){
+  const t=new Date(); t.setHours(0,0,0,0);
+  let tgt;
+  if(item.isLunar){ tgt=nextLunar(item.lm,item.ld); if(!tgt) return null; }
+  else { tgt=new Date(item.date); tgt.setHours(0,0,0,0); }
+  return Math.round((tgt-t)/86400000);
+}
+function dispDate(item){
+  if(item.isLunar){ const d=nextLunar(item.lm,item.ld); return d?("음력 "+item.lm+"/"+item.ld+" ("+fmt(d)+")"):("음력 "+item.lm+"/"+item.ld); }
+  return item.date;
+}
+
+// ════════════════════════════════════════════════
+// 키워드 자동 이모지
+// ════════════════════════════════════════════════
+const KW=[
+  {keys:["여행","trip","travel","해외","비행","공항"],emoji:"✈️",color:"#38BDF8"},
+  {keys:["생일","birthday","잔치"],emoji:"🎂",color:"#FB7185"},
+  {keys:["결혼","웨딩","wedding","혼인"],emoji:"💍",color:"#F9A8D4"},
+  {keys:["운동","헬스","gym","러닝","조깅","수영","등산"],emoji:"🏃",color:"#34D399"},
+  {keys:["공부","시험","수능","토익","자격증"],emoji:"📚",color:"#A78BFA"},
+  {keys:["콘서트","공연","뮤지컬","영화"],emoji:"🎵",color:"#EC4899"},
+  {keys:["식사","밥","점심","저녁","맛집","카페"],emoji:"🍽️",color:"#F97316"},
+  {keys:["병원","진료","검진","건강"],emoji:"💊",color:"#14B8A6"},
+  {keys:["주식","투자","재테크"],emoji:"📈",color:"#FBBF24"},
+  {keys:["추석","설날","명절","제사"],emoji:"🏮",color:"#F59E0B"},
+  {keys:["졸업","입학","합격"],emoji:"🎓",color:"#8B5CF6"},
+  {keys:["강아지","고양이","반려"],emoji:"🐶",color:"#FB923C"},
+  {keys:["성경","교회","예배"],emoji:"📖",color:"#6EE7B7"},
+  {keys:["자동차","주유","세차"],emoji:"🚗",color:"#64748B"},
+  {keys:["기념일","anniversary","데이트"],emoji:"💝",color:"#FB7185"},
+  {keys:["게임","만화","넷플릭스"],emoji:"🎮",color:"#7C3AED"},
+  {keys:["바다","해변","beach"],emoji:"🏖️",color:"#0EA5E9"},
+  {keys:["산","캠핑","트레킹"],emoji:"⛰️",color:"#65A30D"},
+];
+function autoDetect(title){const l=title.toLowerCase();for(const k of KW)if(k.keys.some(w=>l.includes(w)))return{emoji:k.emoji,color:k.color};return null;}
+
+const EMOJIS=["✈️","🎂","💍","🏃","📚","💼","🎵","🍽️","💊","📈","🛍️","🏮","🎓","🏠","🐶","📖","🚗","💝","🎮","🎆","🌸","☕","🎯","🌕","🏖️","⛰️","🎁","🧧","💡","🎪"];
+const COLORS=["#FF6B9D","#A78BFA","#34D399","#FBBF24","#F97316","#38BDF8","#F43F5E","#14B8A6","#8B5CF6","#EC4899","#6366F1","#64748B","#FB7185","#0EA5E9"];
+const TAGS=["루틴","매년","매월","2달","기념일","여행","기타"];
+const REPEATS=["없음","매일","매주","매월","2개월","매년"];
+
+const DEFAULT_ITEMS=[
+  {id:1,tag:"여행",emoji:"✈️",title:"도쿄 여행",date:"2026-08-15",repeat:"없음",color:"#38BDF8",isLunar:false,photo:""},
+  {id:2,tag:"기념일",emoji:"🎂",title:"내 생일 🎉",date:"2026-09-20",repeat:"매년",color:"#FB7185",isLunar:false,photo:""},
+  {id:3,tag:"루틴",emoji:"🏃",title:"운동하기",date:"2026-06-22",repeat:"매일",color:"#34D399",isLunar:false,photo:""},
+  {id:4,tag:"기념일",emoji:"🏮",title:"추석",date:"",repeat:"매년",color:"#F59E0B",isLunar:true,lm:8,ld:15,photo:""},
+];
+
+// ════════════════════════════════════════════════
+// 상태
+// ════════════════════════════════════════════════
+let items = [];
+let filter = "전체";
+let modalState = null; // null | "add" | item object
+let modalForm = null;
+let suggestState = null;
+let storageInfo = null;
+
+// ════════════════════════════════════════════════
+// 렌더링
+// ════════════════════════════════════════════════
+function sprocketRow() {
+  let html = '<div class="sprocket-row">';
+  for (let i = 0; i < 22; i++) html += '<div class="sprocket"></div>';
+  html += '</div>';
+  return html;
+}
+
+function ddayBadgeHtml(diff) {
+  if (diff === null) return "";
+  let label, bg, color, shadow;
+  if (diff === 0) { label = "D-DAY"; bg = "linear-gradient(135deg,#FF6B9D,#FF8E53)"; color = "white"; shadow = "0 0 12px #FF6B9D77"; }
+  else if (diff > 0) { label = "D-" + diff; bg = "linear-gradient(135deg,#A78BFA,#60A5FA)"; color = "white"; shadow = "0 0 10px #A78BFA55"; }
+  else { label = "D+" + Math.abs(diff); bg = "#222"; color = "#555"; shadow = "none"; }
+  return '<div class="dday-badge" style="background:' + bg + ';color:' + color + ';box-shadow:' + shadow + '">' + label + '</div>';
+}
+
+function filmHolesHtml() {
+  let html = '<div class="film-holes">';
+  for (let i = 0; i < 7; i++) html += '<div class="film-hole"></div>';
+  return html + '</div>';
+}
+
+function filmCardHtml(item, index) {
+  const diff = getDday(item);
+  const hasPhoto = !!item.photo;
+  let photoSection;
+  if (hasPhoto) {
+    const pos = item.photoPos || { x: 50, y: 50 };
+    photoSection =
+      '<div class="film-photo-wrap">' +
+        '<img src="' + item.photo + '" style="object-position:' + pos.x + '% ' + pos.y + '%" onerror="this.style.display=&#39;none&#39;;" />' +
+        '<div class="film-grain"></div>' +
+        '<div class="film-vignette"></div>' +
+        '<div class="film-badge-corner">' + ddayBadgeHtml(diff) + '</div>' +
+      '</div>';
+  } else {
+    let stars = "";
+    for (let i = 0; i < 16; i++) {
+      const sz = i % 4 === 0 ? 2 : 1;
+      stars += '<div class="star" style="width:' + sz + 'px;height:' + sz + 'px;opacity:' + (0.15 + Math.random() * 0.35) + ';top:' + (5 + Math.random() * 88) + '%;left:' + (3 + Math.random() * 94) + '%"></div>';
+    }
+    photoSection =
+      '<div class="film-placeholder">' + stars +
+        '<div class="big-emoji" style="filter:drop-shadow(0 0 16px ' + item.color + ')">' + item.emoji + '</div>' +
+        '<div class="film-badge-corner">' + ddayBadgeHtml(diff) + '</div>' +
+      '</div>';
+  }
+
+  return (
+    '<div class="film-card" data-id="' + item.id + '">' +
+      '<div class="film-side left">' + filmHolesHtml() + '</div>' +
+      '<div class="film-body">' +
+        '<div class="film-meta">' +
+          '<div class="film-meta-left"><span class="film-meta-emoji">' + item.emoji + '</span>' +
+          '<span class="film-meta-id">MESTORY ' + String(index + 1).padStart(2, "0") + '</span></div>' +
+          '<span class="film-meta-tag">' + item.tag.toUpperCase() + (item.isLunar ? " 🌙" : "") + '</span>' +
+        '</div>' +
+        photoSection +
+        '<div class="film-bottom">' +
+          '<div style="flex:1;min-width:0">' +
+            '<div class="film-bottom-title">' + escapeHtml(item.title) + '</div>' +
+            '<div class="film-bottom-date">' + dispDate(item) + (item.repeat !== "없음" ? " · " + item.repeat : "") + '</div>' +
+          '</div>' +
+          (item.photo ? '<div class="film-bottom-size">' + fmtSize(byteSize(item.photo)) + '</div>' : "") +
+        '</div>' +
+      '</div>' +
+      '<div class="film-side right">' + filmHolesHtml() + '</div>' +
+    '</div>'
+  );
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function render() {
+  const tagsSet = ["전체", ...Array.from(new Set(items.map(i => i.tag)))];
+  const filtered = filter === "전체" ? items : items.filter(i => i.tag === filter);
+  const sorted = [...filtered].sort((a, b) => {
+    const da = getDday(a), db = getDday(b);
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return da - db;
+  });
+  const ddayCount = items.filter(i => getDday(i) === 0).length;
+
+  let storageHtml = "";
+  if (storageInfo) {
+    const pct = Math.min(100, (storageInfo.usage / storageInfo.quota) * 100);
+    storageHtml =
+      '<div class="storage-box">' +
+        '<div class="storage-label">저장소</div>' +
+        '<div class="storage-val">' + fmtSize(storageInfo.usage) + ' / ' + fmtSize(storageInfo.quota) + '</div>' +
+        '<div class="storage-bar-bg"><div class="storage-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+  }
+
+  const html =
+    '<div class="header">' +
+      '<div class="header-top">' +
+        '<div class="logo-row">' +
+          '<div class="logo-icon">🎞️</div>' +
+          '<div><div class="logo-title">Mestory</div><div class="logo-sub">MY D-DAY STORY</div></div>' +
+        '</div>' +
+        storageHtml +
+      '</div>' +
+      (ddayCount > 0 ? '<div class="dday-banner"><span>🎉</span><span class="txt">오늘 D-DAY가 ' + ddayCount + '개 있어요!</span></div>' : '') +
+      sprocketRow() +
+    '</div>' +
+    '<div class="filters">' +
+      tagsSet.map(t => '<button class="filter-chip ' + (filter === t ? "active" : "") + '" data-filter="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>').join("") +
+    '</div>' +
+    '<div class="film-list">' +
+      (sorted.length === 0
+        ? '<div class="empty-state"><div class="emoji">🎞️</div><div class="txt">첫 컷을 찍어보세요!</div></div>'
+        : sorted.map((item, idx) => filmCardHtml(item, idx)).join("")) +
+    '</div>' +
+    '<div class="bottom-bar">' +
+      sprocketRow() +
+      '<button class="add-btn" id="addBtn"><span style="font-size:18px">🎞️</span> 새 컷 추가하기</button>' +
+    '</div>' +
+    modalHtml();
+
+  document.getElementById("app").innerHTML = html;
+  attachEvents();
+}
+
+// ════════════════════════════════════════════════
+// 모달
+// ════════════════════════════════════════════════
+function modalHtml() {
+  if (!modalState) return '<div class="modal-overlay hidden"></div>';
+  const isEdit = !!modalForm.id;
+  const previewSolar = modalForm.isLunar ? (() => { const d = nextLunar(modalForm.lm, modalForm.ld); return d ? fmt(d) : "변환불가"; })() : null;
+
+  return (
+    '<div class="modal-overlay" id="modalOverlay">' +
+      '<div class="modal-sheet" id="modalSheet">' +
+        '<div class="modal-handle"></div>' +
+        '<div class="modal-title">' + (isEdit ? "✏️ 수정하기" : "🎞️ 새 컷 추가") + '</div>' +
+
+        '<div class="photo-section">' +
+          '<div class="field-label">📷 사진 (자동 압축 저장)</div>' +
+          photoUploaderHtml() +
+        '</div>' +
+
+        '<div class="field">' +
+          '<div class="field-label">제목</div>' +
+          '<input type="text" id="titleInput" placeholder="어떤 날인가요?" value="' + escapeHtml(modalForm.title || "") + '"/>' +
+          (suggestState ?
+            '<div class="suggest-box">' +
+              '<span class="suggest-emoji">' + suggestState.emoji + '</span>' +
+              '<span class="suggest-txt">키워드 자동 감지!</span>' +
+              '<button class="suggest-apply" id="suggestApply">적용</button>' +
+              '<button class="suggest-dismiss" id="suggestDismiss">✕</button>' +
+            '</div>' : '') +
+        '</div>' +
+
+        '<div class="field">' +
+          '<div class="field-label">이모지</div>' +
+          '<div class="emoji-grid">' +
+            EMOJIS.map(e => '<button class="emoji-btn ' + (modalForm.emoji === e ? "active" : "") + '" data-emoji="' + e + '">' + e + '</button>').join("") +
+          '</div>' +
+        '</div>' +
+
+        '<div class="field">' +
+          '<div class="field-label">색상</div>' +
+          '<div class="color-grid">' +
+            COLORS.map(c => '<button class="color-btn ' + (modalForm.color === c ? "active" : "") + '" data-color="' + c + '" style="background:' + c + (modalForm.color === c ? ';box-shadow:0 0 0 2px ' + c : '') + '"></button>').join("") +
+          '</div>' +
+        '</div>' +
+
+        '<div class="field">' +
+          '<div class="field-label">날짜 유형</div>' +
+          '<div class="type-toggle">' +
+            '<button class="type-btn ' + (!modalForm.isLunar ? "active" : "") + '" data-lunar="false">☀️ 양력</button>' +
+            '<button class="type-btn ' + (modalForm.isLunar ? "active" : "") + '" data-lunar="true">🌙 음력</button>' +
+          '</div>' +
+        '</div>' +
+
+        (modalForm.isLunar ?
+          '<div class="field">' +
+            '<div class="lunar-row">' +
+              '<div><div class="field-label">음력 월</div><select id="lmSelect">' +
+                Array.from({length:12},(_,i)=>i+1).map(n => '<option value="' + n + '" ' + (modalForm.lm === n ? "selected" : "") + '>' + n + '월</option>').join("") +
+              '</select></div>' +
+              '<div><div class="field-label">음력 일</div><select id="ldSelect">' +
+                Array.from({length:30},(_,i)=>i+1).map(n => '<option value="' + n + '" ' + (modalForm.ld === n ? "selected" : "") + '>' + n + '일</option>').join("") +
+              '</select></div>' +
+            '</div>' +
+            (previewSolar ? '<div class="lunar-preview">→ 올해 양력: ' + previewSolar + '</div>' : '') +
+          '</div>' :
+          '<div class="field">' +
+            '<div class="field-label">날짜</div>' +
+            '<input type="date" id="dateInput" value="' + (modalForm.date || "") + '"/>' +
+          '</div>'
+        ) +
+
+        '<div class="field two-col">' +
+          '<div><div class="field-label">태그</div><select id="tagSelect">' +
+            TAGS.map(t => '<option value="' + t + '" ' + (modalForm.tag === t ? "selected" : "") + '>' + t + '</option>').join("") +
+          '</select></div>' +
+          '<div><div class="field-label">반복</div><select id="repeatSelect">' +
+            REPEATS.map(r => '<option value="' + r + '" ' + (modalForm.repeat === r ? "selected" : "") + '>' + r + '</option>').join("") +
+          '</select></div>' +
+        '</div>' +
+
+        '<button class="save-btn" id="saveBtn">' + (isEdit ? "💾 저장하기" : "🎞️ 추가하기") + '</button>' +
+        (isEdit ? '<button class="delete-btn" id="deleteBtn">🗑️ 삭제하기</button>' : '') +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function photoUploaderHtml() {
+  const photo = modalForm.photo;
+  if (photo) {
+    const pos = modalForm.photoPos || { x: 50, y: 50 };
+    const sizeTag = modalForm._compSize
+      ? '<div class="photo-size-tag">' +
+          (modalForm._origSize ? '<span class="photo-size-orig">' + fmtSize(modalForm._origSize) + '</span>' : '') +
+          '<span class="photo-size-comp">' + fmtSize(modalForm._compSize) + '</span>' +
+        '</div>'
+      : '';
+    return (
+      '<div class="photo-preview" id="photoPreview">' +
+        '<img id="photoPreviewImg" src="' + photo + '" style="object-position:' + pos.x + '% ' + pos.y + '%"/>' +
+        '<div class="photo-overlay">' +
+          '<button class="photo-change-btn" id="photoChangeBtn">🔄 변경</button>' +
+          '<button class="photo-delete-btn" id="photoDeleteBtn">✕ 삭제</button>' +
+        '</div>' +
+        sizeTag +
+      '</div>' +
+      '<div class="photo-drag-hint">✋ 사진을 드래그하면 위치를 조정할 수 있어요</div>' +
+      '<input type="file" accept="image/*" id="photoFileInput" style="display:none"/>'
+    );
+  }
+  return (
+    '<div class="photo-drop" id="photoDrop">' +
+      '<span class="icon">📷</span>' +
+      '<span class="txt1">클릭 또는 드래그로 사진 추가</span>' +
+      '<span class="txt2">자동으로 압축되어 기기에 저장돼요</span>' +
+    '</div>' +
+    '<input type="file" accept="image/*" id="photoFileInput" style="display:none"/>'
+  );
+}
+
+// ════════════════════════════════════════════════
+// 이벤트 바인딩
+// ════════════════════════════════════════════════
+function attachEvents() {
+  // 필터
+  document.querySelectorAll(".filter-chip").forEach(btn => {
+    btn.onclick = () => { filter = btn.dataset.filter; render(); };
+  });
+
+  // 카드 클릭 → 수정
+  document.querySelectorAll(".film-card").forEach(card => {
+    card.onclick = () => {
+      const id = Number(card.dataset.id);
+      const item = items.find(i => i.id === id);
+      if (item) openModal(item);
+    };
+  });
+
+  // 추가 버튼
+  const addBtn = document.getElementById("addBtn");
+  if (addBtn) addBtn.onclick = () => openModal("add");
+
+  // 모달 관련
+  const overlay = document.getElementById("modalOverlay");
+  if (overlay) {
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+    const sheet = document.getElementById("modalSheet");
+    if (sheet) sheet.onclick = (e) => e.stopPropagation();
+
+    // 제목 입력
+    const titleInput = document.getElementById("titleInput");
+    if (titleInput) {
+      titleInput.oninput = (e) => {
+        modalForm.title = e.target.value;
+        const det = autoDetect(e.target.value);
+        suggestState = det || null;
+        render();
+        // 포커스 복원
+        const ti = document.getElementById("titleInput");
+        if (ti) { ti.focus(); ti.setSelectionRange(ti.value.length, ti.value.length); }
+      };
+    }
+
+    // 제안 적용/닫기
+    const sApply = document.getElementById("suggestApply");
+    if (sApply) sApply.onclick = () => { modalForm.emoji = suggestState.emoji; modalForm.color = suggestState.color; suggestState = null; render(); };
+    const sDismiss = document.getElementById("suggestDismiss");
+    if (sDismiss) sDismiss.onclick = () => { suggestState = null; render(); };
+
+    // 이모지 선택
+    document.querySelectorAll(".emoji-btn").forEach(btn => {
+      btn.onclick = () => { modalForm.emoji = btn.dataset.emoji; render(); };
+    });
+    // 색상 선택
+    document.querySelectorAll(".color-btn").forEach(btn => {
+      btn.onclick = () => { modalForm.color = btn.dataset.color; render(); };
+    });
+    // 양력/음력 토글
+    document.querySelectorAll(".type-btn").forEach(btn => {
+      btn.onclick = () => { modalForm.isLunar = btn.dataset.lunar === "true"; render(); };
+    });
+    // 음력 선택
+    const lmSel = document.getElementById("lmSelect");
+    if (lmSel) lmSel.onchange = (e) => { modalForm.lm = Number(e.target.value); render(); };
+    const ldSel = document.getElementById("ldSelect");
+    if (ldSel) ldSel.onchange = (e) => { modalForm.ld = Number(e.target.value); render(); };
+    // 날짜
+    const dateInput = document.getElementById("dateInput");
+    if (dateInput) dateInput.onchange = (e) => { modalForm.date = e.target.value; };
+    // 태그/반복
+    const tagSel = document.getElementById("tagSelect");
+    if (tagSel) tagSel.onchange = (e) => { modalForm.tag = e.target.value; };
+    const repSel = document.getElementById("repeatSelect");
+    if (repSel) repSel.onchange = (e) => { modalForm.repeat = e.target.value; };
+
+    // 사진 드롭존
+    const photoDrop = document.getElementById("photoDrop");
+    const photoFileInput = document.getElementById("photoFileInput");
+    if (photoDrop && photoFileInput) {
+      photoDrop.onclick = () => photoFileInput.click();
+      photoDrop.ondragover = (e) => { e.preventDefault(); photoDrop.classList.add("dragover"); };
+      photoDrop.ondragleave = () => photoDrop.classList.remove("dragover");
+      photoDrop.ondrop = (e) => {
+        e.preventDefault();
+        photoDrop.classList.remove("dragover");
+        handlePhotoFile(e.dataTransfer.files[0]);
+      };
+    }
+    if (photoFileInput) {
+      photoFileInput.onchange = (e) => handlePhotoFile(e.target.files[0]);
+    }
+    // 사진 드래그로 위치 조정
+    const photoPreview = document.getElementById("photoPreview");
+    const photoPreviewImg = document.getElementById("photoPreviewImg");
+    if (photoPreview && photoPreviewImg) {
+      let dragging = false;
+      let startX = 0, startY = 0;
+      let startPos = { x: 50, y: 50 };
+      photoPreview.onpointerdown = (e) => {
+        if (e.target.closest("button")) return;
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startPos = modalForm.photoPos ? { ...modalForm.photoPos } : { x: 50, y: 50 };
+        if (photoPreview.setPointerCapture) {
+          try { photoPreview.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        e.preventDefault();
+      };
+      photoPreview.onpointermove = (e) => {
+        if (!dragging) return;
+        const rect = photoPreview.getBoundingClientRect();
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        let nx = startPos.x - (dx / rect.width) * 100;
+        let ny = startPos.y - (dy / rect.height) * 100;
+        nx = Math.max(0, Math.min(100, nx));
+        ny = Math.max(0, Math.min(100, ny));
+        modalForm.photoPos = { x: nx, y: ny };
+        photoPreviewImg.style.objectPosition = nx + "% " + ny + "%";
+      };
+      const endDrag = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        if (photoPreview.releasePointerCapture) {
+          try { photoPreview.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+      photoPreview.onpointerup = endDrag;
+      photoPreview.onpointercancel = endDrag;
+    }
+    const photoChangeBtn = document.getElementById("photoChangeBtn");
+    if (photoChangeBtn) photoChangeBtn.onclick = () => photoFileInput && photoFileInput.click();
+    const photoDeleteBtn = document.getElementById("photoDeleteBtn");
+    if (photoDeleteBtn) photoDeleteBtn.onclick = () => {
+      modalForm.photo = "";
+      modalForm._origSize = null;
+      modalForm._compSize = null;
+      modalForm.photoPos = { x: 50, y: 50 };
+      render();
+    };
+
+    // 저장/삭제
+    const saveBtn = document.getElementById("saveBtn");
+    if (saveBtn) saveBtn.onclick = handleSave;
+    const deleteBtn = document.getElementById("deleteBtn");
+    if (deleteBtn) deleteBtn.onclick = handleDelete;
+  }
+}
+
+async function handlePhotoFile(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  modalForm._origSize = file.size;
+  // 압축 중 표시
+  const photoSection = document.querySelector(".photo-section");
+  if (photoSection) {
+    photoSection.innerHTML = '<div class="field-label">📷 사진 (자동 압축 저장)</div><div class="photo-drop"><span class="icon">⏳</span><span class="txt1">압축 중...</span></div>';
+  }
+  try {
+    const compressed = await compressImage(file, 900, 0.75);
+    modalForm.photo = compressed;
+    modalForm._compSize = byteSize(compressed);
+    modalForm.photoPos = { x: 50, y: 50 };
+  } catch (err) {
+    console.error("이미지 압축 실패:", err);
+  }
+  render();
+}
+
+function openModal(target) {
+  if (target === "add") {
+    modalState = "add";
+    modalForm = { title:"", date: fmt(new Date()), repeat:"없음", emoji:"🎯", tag:"기념일", color:"#FF6B9D", isLunar:false, lm:1, ld:1, photo:"", photoPos:{x:50,y:50} };
+  } else {
+    modalState = target;
+    modalForm = { ...target };
+    if (!modalForm.photoPos) modalForm.photoPos = { x: 50, y: 50 };
+  }
+  suggestState = null;
+  render();
+}
+
+function closeModal() {
+  modalState = null;
+  modalForm = null;
+  suggestState = null;
+  render();
+}
+
+async function handleSave() {
+  if (!modalForm.title || !modalForm.title.trim()) return;
+  const toSave = { ...modalForm };
+  delete toSave._origSize;
+  delete toSave._compSize;
+  const next = toSave.id ? toSave : { ...toSave, id: Date.now() };
+  try { await dbPut(next); } catch (e) { console.error(e); }
+  if (toSave.id) {
+    items = items.map(it => it.id === next.id ? next : it);
+  } else {
+    items = [...items, next];
+  }
+  await refreshStorageInfo();
+  closeModal();
+}
+
+async function handleDelete() {
+  const id = modalForm.id;
+  try { await dbDelete(id); } catch (e) { console.error(e); }
+  items = items.filter(it => it.id !== id);
+  closeModal();
+}
+
+async function refreshStorageInfo() {
+  if (navigator.storage && navigator.storage.estimate) {
+    try {
+      const { usage, quota } = await navigator.storage.estimate();
+      storageInfo = { usage, quota };
+    } catch (e) {}
+  }
+}
+
+// ════════════════════════════════════════════════
+// 초기화
+// ════════════════════════════════════════════════
+async function init() {
+  try {
+    const rows = await dbGetAll();
+    if (rows.length === 0) {
+      await Promise.all(DEFAULT_ITEMS.map(it => dbPut(it)));
+      items = DEFAULT_ITEMS;
+    } else {
+      items = rows.sort((a, b) => a.id - b.id);
+    }
+  } catch (e) {
+    console.error("DB 로드 실패, 기본값 사용:", e);
+    items = DEFAULT_ITEMS;
+  }
+  await refreshStorageInfo();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
