@@ -615,7 +615,7 @@ function attachEvents() {
     // 제목 입력
     const titleInput = document.getElementById("titleInput");
     if (titleInput) {
-      titleInput.oninput = (e) => {
+      const commitTitle = (e) => {
         modalForm.title = e.target.value;
         const det = autoDetect(e.target.value);
         suggestState = det || null;
@@ -624,6 +624,13 @@ function attachEvents() {
         const ti = document.getElementById("titleInput");
         if (ti) { ti.focus(); ti.setSelectionRange(ti.value.length, ti.value.length); }
       };
+      titleInput.oninput = (e) => {
+        modalForm.title = e.target.value;
+        // 한글 등 IME로 조합 중일 때는 다시 그리지 않음 (조합이 깨지는 것을 방지)
+        if (e.isComposing) return;
+        commitTitle(e);
+      };
+      titleInput.addEventListener("compositionend", commitTitle);
     }
 
     // 제안 적용/닫기
