@@ -426,7 +426,7 @@ function render() {
     const da = getDday(a), db = getDday(b);
     if (da === null) return 1;
     if (db === null) return -1;
-    return da - db;
+    return Math.abs(da) - Math.abs(db);
   });
   const ddayCount = items.filter(i => getDday(i) === 0).length;
 
